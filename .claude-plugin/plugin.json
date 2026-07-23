@@ -1,0 +1,27 @@
+{
+  "name": "agentcore-assistant",
+  "version": "4.0.0",
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "A skill that helps you build, deploy, and operate AI agents on Amazon Bedrock AgentCore. Bundles a dependency-free CLI that indexes live documentation, API references, SDK patterns, boto3 methods, and CDK/CloudFormation templates from 13 official AWS sources, plus curated best-practice and anti-pattern references. Adapts to intent — exploration, migration, architecture advice, or full implementation.",
+  "keywords": [
+    "aws",
+    "bedrock",
+    "agentcore",
+    "ai-agents",
+    "runtime",
+    "harness",
+    "memory",
+    "gateway",
+    "serverless",
+    "strands",
+    "langgraph",
+    "cdk",
+    "cloudformation",
+    "skill"
+  ],
+  "license": "Apache-2.0",
+  "repository": "https://github.com/aws/agent-toolkit-for-aws",
+  "skills": "../skills/"
+}
