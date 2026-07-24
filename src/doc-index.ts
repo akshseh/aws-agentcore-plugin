@@ -103,14 +103,33 @@ function parseLlmsTxt(content: string, source: SourceConfig): ParseResult {
   return { entries, components };
 }
 
+/**
+ * Infer an AgentCore domain (memory, gateway, runtime, ...) from a boto3
+ * method name so entries can be filtered/searched the same way as the
+ * other sources, instead of all bucketing under the raw source id.
+ */
+function inferBoto3Component(methodName: string): string {
+  const name = methodName.toLowerCase();
+  if (name.includes("memory")) return "memory";
+  if (name.includes("gateway") || name.includes("target")) return "gateway";
+  if (name.includes("harness")) return "harness";
+  if (name.includes("browser")) return "browser";
+  if (name.includes("code_interpreter")) return "code-interpreter";
+  if (name.includes("workload") || name.includes("credential") || name.includes("oauth") || name.includes("token") || name.includes("identity")) return "identity";
+  if (name.includes("evaluat") || name.includes("ab_test")) return "evaluations";
+  if (name.includes("payment")) return "payments";
+  if (name.includes("policy")) return "policy";
+  if (name.includes("registry") || name.includes("agent_card")) return "registry";
+  if (name.includes("runtime") || name.includes("endpoint") || name.includes("invoke")) return "runtime";
+  return "agentcore";
+}
+
 function parseBoto3Index(content: string, source: SourceConfig): ParseResult {
   const entries: DocEntry[] = [];
   const methods: Array<{ title: string; description: string }> = [];
 
   // Match HTML links: <a href="bedrock-agentcore*/client/method.html">method_name</a>
-  // Also match markdown links: [method_name](path.html)
   const htmlLinkRegex = /<a[^>]+href="([^"]*\/client\/[^"]+\.html)"[^>]*>([^<]+)<\/a>/g;
-  const mdLinkRegex = /\[([a-z_\\]+)\]\(([^)]*\/client\/[^)]+\.html)\)/g;
 
   let match;
   const seen = new Set<string>();
@@ -124,13 +143,14 @@ function parseBoto3Index(content: string, source: SourceConfig): ParseResult {
 
     const url = source.baseUrl + relPath;
     const serviceName = source.id === "boto3_control_plane" ? "bedrock-agentcore-control" : "bedrock-agentcore";
+    const component = inferBoto3Component(methodName);
     entries.push({
       url,
       title: methodName,
       description: `boto3 ${serviceName} client method`,
       sourceId: source.id,
-      component: source.id,
-      tags: [source.id, "boto3", "sdk", "python", methodName.split("_")[0]],
+      component,
+      tags: [component, source.id, "boto3", "sdk", "python", methodName.split("_")[0]],
     });
     methods.push({ title: methodName, description: "" });
   }
@@ -196,11 +216,85 @@ function parseGithubReadme(content: string, source: SourceConfig): ParseResult {
   return { entries, components: [component] };
 }
 
-function parseFaqPage(content: string, source: SourceConfig): ParseResult {
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * AWS marketing pages (e.g. the FAQ page) render Q&A from a client-side data
+ * blob embedded as <script type="application/json"> — the visible <h2>/<h3>
+ * tags in the raw HTML are empty shells with no text content. Extract
+ * directly from that JSON rather than trying to scrape the DOM.
+ */
+function extractFaqFromJson(content: string, source: SourceConfig): ParseResult | null {
   const entries: DocEntry[] = [];
   const subPages: Array<{ title: string; description: string }> = [];
 
-  // Extract questions (### headings or bold text patterns)
+  const scriptRegex = /<script type="application\/json">([\s\S]*?)<\/script>/g;
+  let scriptMatch;
+  while ((scriptMatch = scriptRegex.exec(content)) !== null) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(scriptMatch[1]);
+    } catch {
+      continue;
+    }
+
+    const items = (parsed as any)?.data?.items;
+    if (!Array.isArray(items)) continue;
+
+    for (const item of items) {
+      const heading = item?.fields?.itemHeading;
+      const longLoc = item?.fields?.itemLongLoc;
+      if (typeof heading !== "string" || typeof longLoc !== "string") continue;
+      const question = heading.trim();
+      if (!question.endsWith("?")) continue;
+
+      const desc = stripHtmlToText(longLoc).slice(0, 200);
+      entries.push({
+        url: source.indexUrl,
+        title: question,
+        description: desc,
+        sourceId: source.id,
+        component: "faq",
+        tags: ["faq", ...inferFaqTags(question)],
+      });
+      subPages.push({ title: question, description: desc });
+    }
+  }
+
+  if (entries.length === 0) return null;
+
+  const component: ComponentSummary = {
+    name: "faq",
+    sectionTitle: "AgentCore Frequently Asked Questions",
+    sectionUrl: source.indexUrl,
+    sourceId: source.id,
+    subPages,
+  };
+
+  return { entries, components: [component] };
+}
+
+function parseFaqPage(content: string, source: SourceConfig): ParseResult {
+  const fromJson = extractFaqFromJson(content, source);
+  if (fromJson) return fromJson;
+
+  const entries: DocEntry[] = [];
+  const subPages: Array<{ title: string; description: string }> = [];
+
+  // Fallback: extract questions from markdown-style ### headings, in case
+  // the page ever ships as (or is proxied through) a markdown/llms.txt-like
+  // format instead of the JSON-driven HTML it uses today.
   const lines = content.split("\n");
   let currentQuestion = "";
   let currentAnswer = "";

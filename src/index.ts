@@ -192,8 +192,12 @@ Results are cached locally (default 60 min TTL) so repeated fetches are instant.
   async ({ url }) => {
     try {
       const content = await fetchDocPage(url);
+      const MAX_CHARS = 20000;
+      const body = content.length > MAX_CHARS
+        ? `${content.slice(0, MAX_CHARS)}\n\n*[Truncated at ${MAX_CHARS} characters — page is ${content.length} characters. Ask for a narrower section or a different page if you need more.]*`
+        : content;
       return {
-        content: [{ type: "text", text: `**Source:** ${url}\n\n---\n\n${content}` }]
+        content: [{ type: "text", text: `**Source:** ${url}\n\n---\n\n${body}` }]
       };
     } catch (err) {
       return {

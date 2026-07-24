@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 // We test the parsers indirectly by mocking fetchRawUrl and calling getIndex/getComponents
 // This verifies parsing logic without network calls
@@ -10,6 +12,10 @@ vi.mock("../src/fetcher.js", () => ({
 }));
 
 import { fetchRawUrl } from "../src/fetcher.js";
+
+function readFixture(name: string): string {
+  return readFileSync(path.resolve(__dirname, "fixtures", name), "utf-8");
+}
 
 const MOCK_LLMS_TXT = `# Amazon Bedrock AgentCore Developer Guide
 
@@ -240,6 +246,25 @@ AgentCore Runtime is a secure, serverless runtime for deploying agents.
       const runtimeFaq = entries.find(e => e.title.includes("Runtime"));
       expect(runtimeFaq).toBeDefined();
       expect(runtimeFaq!.tags).toContain("runtime");
+    });
+
+    // The live FAQ page renders Q&A from a client-side data blob embedded as
+    // <script type="application/json">; the visible <h2>/<h3> tags are empty
+    // toggle-button shells with no text. A mock built from markdown-style
+    // headings (like the one above) can't catch a regression here — this
+    // fixture is a trimmed capture of the real page's actual HTML/JSON shape.
+    it("extracts questions from the real page's embedded JSON (not markdown headings)", async () => {
+      process.env.AGENTCORE_SOURCES = "faq";
+      vi.mocked(fetchRawUrl).mockResolvedValue(readFixture("faq-real.html"));
+
+      const { getIndex } = await import("../src/doc-index.js");
+      const entries = await getIndex();
+
+      expect(entries.length).toBe(3);
+      expect(entries[0].title).toBe("What is Amazon Bedrock AgentCore?");
+      expect(entries[0].description).toContain("platform to build, connect, and optimize");
+      // The single generic-fallback entry must NOT fire when JSON parses fine.
+      expect(entries.every(e => e.title !== "AgentCore FAQs")).toBe(true);
     });
   });
 

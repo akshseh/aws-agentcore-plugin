@@ -41,7 +41,7 @@ export function clearCache(): void {
 export function fetchRawUrl(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const client = url.startsWith("https") ? https : http;
-    const req = client.get(url, { headers: { "User-Agent": "AgentCore-Assistant/3.0" } }, (res) => {
+    const req = client.get(url, { headers: { "User-Agent": "AgentCore-Assistant/4.3" } }, (res) => {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         fetchRawUrl(res.headers.location).then(resolve).catch(reject);
         return;
@@ -64,22 +64,170 @@ export function fetchRawUrl(url: string): Promise<string> {
 }
 
 /**
+ * Extract the inner HTML of the first element matching `openTagRegex`,
+ * tracking nested same-name tags so the extraction doesn't stop at the
+ * first nested closing tag (a plain non-greedy regex would).
+ */
+function extractBalancedTag(html: string, tagName: string, openTagRegex: RegExp): string | null {
+  const openMatch = html.match(openTagRegex);
+  if (!openMatch || openMatch.index === undefined) return null;
+
+  const start = openMatch.index + openMatch[0].length;
+  const openNeedle = `<${tagName}`;
+  const closeNeedle = `</${tagName}>`;
+
+  let depth = 1;
+  let i = start;
+  while (depth > 0) {
+    const nextClose = html.indexOf(closeNeedle, i);
+    if (nextClose === -1) return null;
+    const nextOpen = html.indexOf(openNeedle, i);
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth++;
+      i = nextOpen + openNeedle.length;
+    } else {
+      depth--;
+      i = nextClose + closeNeedle.length;
+    }
+  }
+
+  return html.slice(start, i - closeNeedle.length);
+}
+
+/**
+ * Known main-content containers across the doc sites this server fetches,
+ * tried most-specific first. Falls back to raw HTML (still cleaned of
+ * nav/scripts by later steps) when none match.
+ */
+const CONTENT_CONTAINERS: Array<{ tagName: string; openTagRegex: RegExp }> = [
+  // Classic AWS docs (devguide, API reference, CloudFormation reference).
+  { tagName: "div", openTagRegex: /<div id="main-col-body"[^>]*>/ },
+  // DocFX-generated docs (CDK .NET reference) — must come before the
+  // Sphinx `role="main"` selector below: DocFX pages also carry an outer
+  // `<div role="main">` wrapper (with sidenav) around this narrower article.
+  { tagName: "article", openTagRegex: /<article[^>]*id="_content"[^>]*>/ },
+  // pkg.go.dev package pages (CDK Go reference) — the outer <main> is
+  // multiple MB (full sidebar + import graph); this scopes to the readme body.
+  { tagName: "div", openTagRegex: /<div class="UnitReadme-content[^"]*"[^>]*>/ },
+  // Sphinx-generated docs (boto3, CDK Python reference).
+  { tagName: "div", openTagRegex: /<div role="main"[^>]*>/ },
+  // Generic fallback (e.g. CDK Java reference, and any future single_page source).
+  { tagName: "main", openTagRegex: /<main[^>]*>/ },
+];
+
+/**
+ * Collapse a table cell's inner HTML down to a single line of plain-ish
+ * text, resolving links and stripping any block-level tags so it survives
+ * as one Markdown table cell (a bare newline or unresolved tag would break
+ * the row's `|`-delimited structure).
+ */
+function cellToInlineText(cellHtml: string): string {
+  return cellHtml
+    .replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, "$2 ($1)")
+    .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, "`$1`")
+    .replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**")
+    .replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, "**$1**")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Convert an HTML <table>'s inner HTML into a GitHub-flavored Markdown
+ * table. Falls back to a plain paragraph if the structure doesn't parse
+ * (e.g. no rows) so we never drop content, just lose the grid formatting.
+ */
+function tableToMarkdown(tableHtml: string): string {
+  const rowMatches = tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+  if (!rowMatches || rowMatches.length === 0) return cellToInlineText(tableHtml);
+
+  const rows = rowMatches.map(row => {
+    const cellMatches = row.match(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi) || [];
+    return cellMatches.map(cell => {
+      const inner = cell.replace(/^<t[hd][^>]*>/i, "").replace(/<\/t[hd]>$/i, "");
+      return cellToInlineText(inner);
+    });
+  }).filter(row => row.length > 0);
+
+  if (rows.length === 0) return cellToInlineText(tableHtml);
+
+  const colCount = Math.max(...rows.map(r => r.length));
+  const pad = (row: string[]) => {
+    const padded = [...row];
+    while (padded.length < colCount) padded.push("");
+    return padded;
+  };
+
+  const lines = [
+    `\n| ${pad(rows[0]).join(" | ")} |`,
+    `| ${Array(colCount).fill("---").join(" | ")} |`,
+    ...rows.slice(1).map(r => `| ${pad(r).join(" | ")} |`),
+  ];
+
+  return lines.join("\n") + "\n";
+}
+
+/**
+ * AWS marketing pages (e.g. the AgentCore FAQ page) render their content
+ * from a client-side data blob embedded as <script type="application/json">
+ * — the visible heading/paragraph tags are empty shells with no text, so the
+ * normal DOM-based extraction below finds nothing useful. Detect that shape
+ * and render the Q&A directly from the JSON instead.
+ */
+function extractJsonDrivenFaqMarkdown(html: string): string | null {
+  const scriptRegex = /<script type="application\/json">([\s\S]*?)<\/script>/g;
+  const sections: string[] = [];
+  let scriptMatch;
+
+  while ((scriptMatch = scriptRegex.exec(html)) !== null) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(scriptMatch[1]);
+    } catch {
+      continue;
+    }
+
+    const items = (parsed as any)?.data?.items;
+    if (!Array.isArray(items)) continue;
+
+    for (const item of items) {
+      const heading = item?.fields?.itemHeading;
+      const longLoc = item?.fields?.itemLongLoc;
+      if (typeof heading !== "string" || typeof longLoc !== "string") continue;
+      if (!heading.trim().endsWith("?")) continue;
+      sections.push(`## ${heading.trim()}\n\n${longLoc}`);
+    }
+  }
+
+  return sections.length > 0 ? sections.join("\n\n") : null;
+}
+
+/**
  * Convert raw HTML to readable Markdown.
  * Extracts the main content area and strips navigation/scripts.
  */
-function htmlToMarkdown(html: string): string {
+export function htmlToMarkdown(html: string): string {
+  const jsonFaq = extractJsonDrivenFaqMarkdown(html);
+  if (jsonFaq !== null) {
+    return htmlToMarkdownInner(jsonFaq);
+  }
+  return htmlToMarkdownInner(html);
+}
+
+function htmlToMarkdownInner(html: string): string {
   let content = html;
 
-  const mainMatch = content.match(/<div id="main-col-body"[^>]*>([\s\S]*?)<\/div>\s*<div/);
-  if (mainMatch) {
-    content = mainMatch[1];
-  } else {
-    const articleMatch = content.match(/<main[^>]*>([\s\S]*?)<\/main>/);
-    if (articleMatch) content = articleMatch[1];
+  for (const { tagName, openTagRegex } of CONTENT_CONTAINERS) {
+    const extracted = extractBalancedTag(html, tagName, openTagRegex);
+    if (extracted !== null) {
+      content = extracted;
+      break;
+    }
   }
 
   content = content.replace(/<script[\s\S]*?<\/script>/gi, "");
   content = content.replace(/<style[\s\S]*?<\/style>/gi, "");
+  content = content.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_m, tableHtml) => tableToMarkdown(tableHtml));
   content = content.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, "\n# $1\n");
   content = content.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "\n## $1\n");
   content = content.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, "\n### $1\n");

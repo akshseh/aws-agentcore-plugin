@@ -21114,7 +21114,7 @@ function getCacheTTL() {
 function fetchRawUrl(url) {
   return new Promise((resolve, reject) => {
     const client = url.startsWith("https") ? import_node_https.default : import_node_http.default;
-    const req = client.get(url, { headers: { "User-Agent": "AgentCore-Assistant/3.0" } }, (res) => {
+    const req = client.get(url, { headers: { "User-Agent": "AgentCore-Assistant/4.3" } }, (res) => {
       if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         fetchRawUrl(res.headers.location).then(resolve).catch(reject);
         return;
@@ -21135,17 +21135,115 @@ function fetchRawUrl(url) {
     });
   });
 }
+function extractBalancedTag(html, tagName, openTagRegex) {
+  const openMatch = html.match(openTagRegex);
+  if (!openMatch || openMatch.index === void 0) return null;
+  const start = openMatch.index + openMatch[0].length;
+  const openNeedle = `<${tagName}`;
+  const closeNeedle = `</${tagName}>`;
+  let depth = 1;
+  let i = start;
+  while (depth > 0) {
+    const nextClose = html.indexOf(closeNeedle, i);
+    if (nextClose === -1) return null;
+    const nextOpen = html.indexOf(openNeedle, i);
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth++;
+      i = nextOpen + openNeedle.length;
+    } else {
+      depth--;
+      i = nextClose + closeNeedle.length;
+    }
+  }
+  return html.slice(start, i - closeNeedle.length);
+}
+var CONTENT_CONTAINERS = [
+  // Classic AWS docs (devguide, API reference, CloudFormation reference).
+  { tagName: "div", openTagRegex: /<div id="main-col-body"[^>]*>/ },
+  // DocFX-generated docs (CDK .NET reference) — must come before the
+  // Sphinx `role="main"` selector below: DocFX pages also carry an outer
+  // `<div role="main">` wrapper (with sidenav) around this narrower article.
+  { tagName: "article", openTagRegex: /<article[^>]*id="_content"[^>]*>/ },
+  // pkg.go.dev package pages (CDK Go reference) — the outer <main> is
+  // multiple MB (full sidebar + import graph); this scopes to the readme body.
+  { tagName: "div", openTagRegex: /<div class="UnitReadme-content[^"]*"[^>]*>/ },
+  // Sphinx-generated docs (boto3, CDK Python reference).
+  { tagName: "div", openTagRegex: /<div role="main"[^>]*>/ },
+  // Generic fallback (e.g. CDK Java reference, and any future single_page source).
+  { tagName: "main", openTagRegex: /<main[^>]*>/ }
+];
+function cellToInlineText(cellHtml) {
+  return cellHtml.replace(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, "$2 ($1)").replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, "`$1`").replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**").replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, "**$1**").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+function tableToMarkdown(tableHtml) {
+  const rowMatches = tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+  if (!rowMatches || rowMatches.length === 0) return cellToInlineText(tableHtml);
+  const rows = rowMatches.map((row) => {
+    const cellMatches = row.match(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi) || [];
+    return cellMatches.map((cell) => {
+      const inner = cell.replace(/^<t[hd][^>]*>/i, "").replace(/<\/t[hd]>$/i, "");
+      return cellToInlineText(inner);
+    });
+  }).filter((row) => row.length > 0);
+  if (rows.length === 0) return cellToInlineText(tableHtml);
+  const colCount = Math.max(...rows.map((r) => r.length));
+  const pad = (row) => {
+    const padded = [...row];
+    while (padded.length < colCount) padded.push("");
+    return padded;
+  };
+  const lines = [
+    `
+| ${pad(rows[0]).join(" | ")} |`,
+    `| ${Array(colCount).fill("---").join(" | ")} |`,
+    ...rows.slice(1).map((r) => `| ${pad(r).join(" | ")} |`)
+  ];
+  return lines.join("\n") + "\n";
+}
+function extractJsonDrivenFaqMarkdown(html) {
+  const scriptRegex = /<script type="application\/json">([\s\S]*?)<\/script>/g;
+  const sections = [];
+  let scriptMatch;
+  while ((scriptMatch = scriptRegex.exec(html)) !== null) {
+    let parsed;
+    try {
+      parsed = JSON.parse(scriptMatch[1]);
+    } catch {
+      continue;
+    }
+    const items = parsed?.data?.items;
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      const heading = item?.fields?.itemHeading;
+      const longLoc = item?.fields?.itemLongLoc;
+      if (typeof heading !== "string" || typeof longLoc !== "string") continue;
+      if (!heading.trim().endsWith("?")) continue;
+      sections.push(`## ${heading.trim()}
+
+${longLoc}`);
+    }
+  }
+  return sections.length > 0 ? sections.join("\n\n") : null;
+}
 function htmlToMarkdown(html) {
+  const jsonFaq = extractJsonDrivenFaqMarkdown(html);
+  if (jsonFaq !== null) {
+    return htmlToMarkdownInner(jsonFaq);
+  }
+  return htmlToMarkdownInner(html);
+}
+function htmlToMarkdownInner(html) {
   let content = html;
-  const mainMatch = content.match(/<div id="main-col-body"[^>]*>([\s\S]*?)<\/div>\s*<div/);
-  if (mainMatch) {
-    content = mainMatch[1];
-  } else {
-    const articleMatch = content.match(/<main[^>]*>([\s\S]*?)<\/main>/);
-    if (articleMatch) content = articleMatch[1];
+  for (const { tagName, openTagRegex } of CONTENT_CONTAINERS) {
+    const extracted = extractBalancedTag(html, tagName, openTagRegex);
+    if (extracted !== null) {
+      content = extracted;
+      break;
+    }
   }
   content = content.replace(/<script[\s\S]*?<\/script>/gi, "");
   content = content.replace(/<style[\s\S]*?<\/style>/gi, "");
+  content = content.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_m, tableHtml) => tableToMarkdown(tableHtml));
   content = content.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, "\n# $1\n");
   content = content.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "\n## $1\n");
   content = content.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, "\n### $1\n");
@@ -21380,11 +21478,25 @@ function parseLlmsTxt(content, source) {
   if (currentComponent) components.push(currentComponent);
   return { entries, components };
 }
+function inferBoto3Component(methodName) {
+  const name = methodName.toLowerCase();
+  if (name.includes("memory")) return "memory";
+  if (name.includes("gateway") || name.includes("target")) return "gateway";
+  if (name.includes("harness")) return "harness";
+  if (name.includes("browser")) return "browser";
+  if (name.includes("code_interpreter")) return "code-interpreter";
+  if (name.includes("workload") || name.includes("credential") || name.includes("oauth") || name.includes("token") || name.includes("identity")) return "identity";
+  if (name.includes("evaluat") || name.includes("ab_test")) return "evaluations";
+  if (name.includes("payment")) return "payments";
+  if (name.includes("policy")) return "policy";
+  if (name.includes("registry") || name.includes("agent_card")) return "registry";
+  if (name.includes("runtime") || name.includes("endpoint") || name.includes("invoke")) return "runtime";
+  return "agentcore";
+}
 function parseBoto3Index(content, source) {
   const entries = [];
   const methods = [];
   const htmlLinkRegex = /<a[^>]+href="([^"]*\/client\/[^"]+\.html)"[^>]*>([^<]+)<\/a>/g;
-  const mdLinkRegex = /\[([a-z_\\]+)\]\(([^)]*\/client\/[^)]+\.html)\)/g;
   let match;
   const seen = /* @__PURE__ */ new Set();
   while ((match = htmlLinkRegex.exec(content)) !== null) {
@@ -21395,13 +21507,14 @@ function parseBoto3Index(content, source) {
     if (["can_paginate", "close", "get_paginator", "get_waiter"].includes(methodName)) continue;
     const url = source.baseUrl + relPath;
     const serviceName2 = source.id === "boto3_control_plane" ? "bedrock-agentcore-control" : "bedrock-agentcore";
+    const component2 = inferBoto3Component(methodName);
     entries.push({
       url,
       title: methodName,
       description: `boto3 ${serviceName2} client method`,
       sourceId: source.id,
-      component: source.id,
-      tags: [source.id, "boto3", "sdk", "python", methodName.split("_")[0]]
+      component: component2,
+      tags: [component2, source.id, "boto3", "sdk", "python", methodName.split("_")[0]]
     });
     methods.push({ title: methodName, description: "" });
   }
@@ -21456,7 +21569,54 @@ function parseGithubReadme(content, source) {
   };
   return { entries, components: [component] };
 }
+function stripHtmlToText(html) {
+  return html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, " ").trim();
+}
+function extractFaqFromJson(content, source) {
+  const entries = [];
+  const subPages = [];
+  const scriptRegex = /<script type="application\/json">([\s\S]*?)<\/script>/g;
+  let scriptMatch;
+  while ((scriptMatch = scriptRegex.exec(content)) !== null) {
+    let parsed;
+    try {
+      parsed = JSON.parse(scriptMatch[1]);
+    } catch {
+      continue;
+    }
+    const items = parsed?.data?.items;
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      const heading = item?.fields?.itemHeading;
+      const longLoc = item?.fields?.itemLongLoc;
+      if (typeof heading !== "string" || typeof longLoc !== "string") continue;
+      const question = heading.trim();
+      if (!question.endsWith("?")) continue;
+      const desc = stripHtmlToText(longLoc).slice(0, 200);
+      entries.push({
+        url: source.indexUrl,
+        title: question,
+        description: desc,
+        sourceId: source.id,
+        component: "faq",
+        tags: ["faq", ...inferFaqTags(question)]
+      });
+      subPages.push({ title: question, description: desc });
+    }
+  }
+  if (entries.length === 0) return null;
+  const component = {
+    name: "faq",
+    sectionTitle: "AgentCore Frequently Asked Questions",
+    sectionUrl: source.indexUrl,
+    sourceId: source.id,
+    subPages
+  };
+  return { entries, components: [component] };
+}
 function parseFaqPage(content, source) {
+  const fromJson = extractFaqFromJson(content, source);
+  if (fromJson) return fromJson;
   const entries = [];
   const subPages = [];
   const lines = content.split("\n");
@@ -21876,12 +22036,16 @@ Results are cached locally (default 60 min TTL) so repeated fetches are instant.
   async ({ url }) => {
     try {
       const content = await fetchDocPage(url);
+      const MAX_CHARS = 2e4;
+      const body = content.length > MAX_CHARS ? `${content.slice(0, MAX_CHARS)}
+
+*[Truncated at ${MAX_CHARS} characters \u2014 page is ${content.length} characters. Ask for a narrower section or a different page if you need more.]*` : content;
       return {
         content: [{ type: "text", text: `**Source:** ${url}
 
 ---
 
-${content}` }]
+${body}` }]
       };
     } catch (err) {
       return {
