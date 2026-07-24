@@ -1,0 +1,14 @@
+{
+    "mcpServers": {
+        "agentcore-docs": {
+            "command": "node",
+            "args": [
+                "${CLAUDE_PLUGIN_ROOT}/dist/index.js"
+            ],
+            "env": {
+                "AGENTCORE_SOURCES": "all",
+                "AGENTCORE_CACHE_TTL_MINUTES": "60"
+            }
+        }
+    }
+}
