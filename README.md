@@ -23,7 +23,7 @@ Each skill pre-approves the read-only tools its workflow needs (docs search, `ag
 The repo ships with a prebuilt server (`dist/index.js`) — no build step needed. In Claude Code:
 
 ```
-/plugin marketplace add <owner>/aws-agentcore-plugin   # from GitHub
+/plugin marketplace add akshseh/aws-agentcore-plugin   # from GitHub
 /plugin install aws-agentcore@aws-agentcore-marketplace
 ```
 

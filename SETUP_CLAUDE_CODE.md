@@ -15,7 +15,7 @@ Everything you need to install, verify, and use the AgentCore plugin in Claude C
 ## Step 1: Get the plugin
 
 ```bash
-git clone https://github.com/<owner>/aws-agentcore-plugin.git
+git clone https://github.com/akshseh/aws-agentcore-plugin.git
 ```
 
 The repo ships with a prebuilt `dist/index.js` — the self-contained MCP server (bundled, no node_modules needed at runtime). To rebuild from source: `npm install && npm run build`.
