@@ -1,62 +1,99 @@
 #!/bin/bash
-# AgentCore Assistant — Skill Installer
-# Copies the agentcore skill into a target project (or your personal skills dir).
+# AgentCore Assistant — Local Installer
+# Installs the MCP server and skills into a target project directory.
 #
-# The skill is fully self-contained: a dependency-free Python CLI plus Markdown.
-# There is nothing to build and no packages to install — you only need Python 3.8+.
+# Note: the recommended install is as a Claude Code plugin (see README.md);
+# this script is for per-project installs without the plugin system.
 #
 # Usage:
-#   ./install.sh                    # install into ./.claude/skills (current project)
-#   ./install.sh /path/to/project   # install into a specific project
-#   ./install.sh --global           # install into ~/.claude/skills (all projects)
+#   ./install.sh                  # installs into current directory
+#   ./install.sh /path/to/project # installs into specified directory
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL_SRC="$SCRIPT_DIR/skills/agentcore"
+TARGET_DIR="${1:-.}"
+TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 
-if [ "$1" = "--global" ]; then
-  DEST_ROOT="$HOME/.claude/skills"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  AgentCore Assistant — Installer"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  Source:  $SCRIPT_DIR"
+echo "  Target:  $TARGET_DIR"
+echo ""
+
+# Build if not already built
+if [ ! -f "$SCRIPT_DIR/dist/index.js" ]; then
+  echo "→ Building MCP server..."
+  (cd "$SCRIPT_DIR" && npm install && npm run build)
+  echo ""
+fi
+
+# Write MCP config into .mcp.json at the project root.
+# (Claude Code reads project-scoped MCP servers from .mcp.json,
+# NOT from .claude/settings.json.)
+MCP_FILE="$TARGET_DIR/.mcp.json"
+if [ -f "$MCP_FILE" ]; then
+  if grep -q '"agentcore"' "$MCP_FILE"; then
+    echo "✓ $MCP_FILE already has an 'agentcore' server — leaving it unchanged"
+  else
+    TMP_FILE=$(mktemp)
+    node -e "
+      const fs = require('fs');
+      const config = JSON.parse(fs.readFileSync(process.argv[1], 'utf-8'));
+      config.mcpServers = config.mcpServers || {};
+      config.mcpServers.agentcore = {
+        command: 'node',
+        args: [process.argv[2] + '/dist/index.js']
+      };
+      fs.writeFileSync(process.argv[3], JSON.stringify(config, null, 2) + '\n');
+    " "$MCP_FILE" "$SCRIPT_DIR" "$TMP_FILE"
+    mv "$TMP_FILE" "$MCP_FILE"
+    echo "✓ MCP server added to existing $MCP_FILE"
+  fi
 else
-  TARGET_DIR="${1:-.}"
-  TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
-  DEST_ROOT="$TARGET_DIR/.claude/skills"
+  cat > "$MCP_FILE" << EOF
+{
+  "mcpServers": {
+    "agentcore": {
+      "command": "node",
+      "args": ["$SCRIPT_DIR/dist/index.js"]
+    }
+  }
+}
+EOF
+  echo "✓ Created $MCP_FILE with MCP server config"
 fi
 
-DEST="$DEST_ROOT/agentcore"
-
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  AgentCore Assistant — Skill Installer"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "  Source:  $SKILL_SRC"
-echo "  Target:  $DEST"
-echo ""
-
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "⚠  Python not found. The skill's knowledge CLI needs Python 3.8+."
-  echo "   Install Python, then re-run this script."
-  exit 1
+# Copy command file
+mkdir -p "$TARGET_DIR/.claude/commands"
+CMD_SRC="$SCRIPT_DIR/commands/agentcore.md"
+CMD_DST="$TARGET_DIR/.claude/commands/agentcore.md"
+if [ -f "$CMD_SRC" ]; then
+  cp "$CMD_SRC" "$CMD_DST"
+  echo "✓ Command /agentcore installed to $CMD_DST"
+else
+  echo "⚠  Command file not found at $CMD_SRC — skipping"
 fi
 
-if [ ! -f "$SKILL_SRC/SKILL.md" ]; then
-  echo "⚠  Could not find the skill at $SKILL_SRC"
-  exit 1
+# Copy skills (architect, build, deploy, production-readiness)
+if [ -d "$SCRIPT_DIR/skills" ]; then
+  mkdir -p "$TARGET_DIR/.claude/skills"
+  cp -r "$SCRIPT_DIR/skills/." "$TARGET_DIR/.claude/skills/"
+  echo "✓ Skills installed to $TARGET_DIR/.claude/skills/"
 fi
 
-mkdir -p "$DEST_ROOT"
-rm -rf "$DEST"
-cp -R "$SKILL_SRC" "$DEST"
+echo ""
+echo "ℹ  Prefer plugin install? From Claude Code run:"
+echo "     /plugin marketplace add $SCRIPT_DIR"
+echo "     /plugin install aws-agentcore@aws-agentcore-marketplace"
 
-echo "✓ Skill 'agentcore' installed."
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Done! Open Claude Code and try:"
+echo "  Done! Open Claude Code in $TARGET_DIR"
+echo "  (approve the project MCP server when prompted)"
 echo ""
-echo "    \"What components does AgentCore have?\""
-echo "    \"Build me a customer support agent with memory\""
-echo ""
-echo "  The skill triggers automatically on AgentCore topics."
-echo "  Verify the CLI:"
-echo "    python3 \"$DEST/scripts/agentcore_cli.py\" sources"
+echo "  Verify:  /mcp        → should show agentcore server"
+echo "  Try:     /agentcore  → should invoke the command"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

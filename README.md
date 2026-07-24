@@ -1,177 +1,189 @@
-# Amazon Bedrock AgentCore Assistant — an AI Coding Skill
+# Amazon Bedrock AgentCore Plugin
 
-A self-contained **skill** that gives any AI coding assistant that loads skills (Claude Code, Cursor, Kiro, and others) comprehensive, always-fresh knowledge about Amazon Bedrock AgentCore — AWS's managed platform for building, deploying, and operating AI agents.
+A Claude Code plugin for designing, building, deploying, and hardening AI agent solutions on Amazon Bedrock AgentCore. It combines:
 
-Everything is a skill. There is no separate server to run, no ports, and **no packages to install** — the skill bundles a dependency-free Python CLI that fetches live documentation on demand, alongside curated best-practice guidance.
+- **A live-documentation MCP server** — indexes 1800+ pages from 13 official AWS sources with zero static content, so answers about APIs, regions, pricing, and quotas are always fresh.
+- **Four guided skills** that encode the solution-architecture workflow — requirements elicitation, best practices, and anti-patterns — for both production developers and solutions architects building PoCs.
+
+## Skills
+
+| Skill | Invoke | What it does |
+|---|---|---|
+| **architect** | `/aws-agentcore:architect` | Designs end-to-end solutions. Clarifies the four load-bearing decisions (PoC vs. production, security/VPC boundary, identity, existing infrastructure), applies best-practice defaults for the rest, and delivers a component map + diagram + assumptions + open decisions. |
+| **build** | `/aws-agentcore:build` | Implements the design — scaffolds projects with the AgentCore CLI, wraps existing framework code (Strands/LangGraph/CrewAI/ADK/OpenAI Agents) for Runtime, wires memory/gateway/identity/tools. Verifies every API shape against live docs before generating code. |
+| **deploy** | `/aws-agentcore:deploy` | Ships to AWS (CLI for dev, IaC for production) and troubleshoots deploy/invoke failures with a diagnosis table for the common failure classes. |
+| **production-readiness** | `/aws-agentcore:production-readiness` | Audits code, config, and deployed resources against a security/networking/reliability/observability/cost checklist and produces a ship / ship-with-risks / do-not-ship report. |
+
+An `/aws-agentcore:agentcore` router command (`/agentcore` when installed via `install.sh`) routes free-form requests to the right skill. Skills also auto-trigger from natural language ("build me a support agent with memory on AWS").
+
+Each skill pre-approves the read-only tools its workflow needs (docs search, `agentcore status/logs`, read-only AWS CLI inspection), so you aren't prompted for every harmless command. A safety hook asks for confirmation — showing the target AWS account and region — before any mutating command (`agentcore deploy`/`destroy`, control-plane create/update/delete), because deploying to the wrong account is the most common self-inflicted failure. See [PRIVACY.md](PRIVACY.md) for exactly what leaves your machine (short answer: only public-docs fetches; queries and credentials never do).
+
+## Install (Claude Code plugin — recommended)
+
+The repo ships with a prebuilt server (`dist/index.js`) — no build step needed. In Claude Code:
+
+```
+/plugin marketplace add <owner>/aws-agentcore-plugin   # from GitHub
+/plugin install aws-agentcore@aws-agentcore-marketplace
+```
+
+Or from a local clone: `/plugin marketplace add /path/to/aws-agentcore-plugin`.
+
+This registers the MCP server and all skills automatically, available in every project. To rebuild the server from source: `npm install && npm run build`.
+
+Alternatively use `./install.sh` to install into a single project (writes the MCP config to the project's `.mcp.json` and copies the command + skills into `.claude/` — see [SETUP_CLAUDE_CODE.md](SETUP_CLAUDE_CODE.md)).
 
 ## Problem
 
-AI coding assistants hallucinate when asked about AgentCore. They recommend EKS, Fargate, or patterns that don't exist because AgentCore is newer than their training data — they don't know its Runtime, Harness, Memory, Gateway, and other services. This skill fixes that by grounding every answer in official AWS documentation and layering on opinionated best-practice guidance.
+AI coding assistants hallucinate when asked about AgentCore. They recommend EKS, Fargate, or outdated patterns because they lack knowledge of AgentCore's Runtime, Harness, Memory, Gateway, and other services. This plugin fixes that with structured, always-fresh access to official AWS documentation — and skills that know which questions to ask (security → VPC needs, existing IdP/IaC to plug into) and which best practices to apply without asking.
 
-## What's in the skill
+## Sources
 
-```
-skills/agentcore/
-  SKILL.md                    # the skill: intent detection + 8 guided workflows
-  scripts/
-    agentcore_cli.py          # knowledge CLI: list | search | fetch | sources
-    lib/
-      sources.py              # 13 source definitions
-      doc_index.py            # multi-source parser + search
-      fetcher.py              # HTTP fetch, HTML→Markdown, on-disk TTL cache
-  references/
-    best-practices.md         # do-this guidance for every component
-    anti-patterns.md          # avoid-this patterns + Top 10
-```
-
-### The knowledge CLI
-
-The skill drives a small CLI. It uses only the Python standard library, so nothing needs installing or building, and it runs on macOS, Linux, and Windows.
-
-```bash
-python3 scripts/agentcore_cli.py list                                  # overview of all components
-python3 scripts/agentcore_cli.py search "memory strategies" --source docs
-python3 scripts/agentcore_cli.py fetch "https://docs.aws.amazon.com/.../memory.html"
-python3 scripts/agentcore_cli.py sources                               # list enabled sources
-```
-
-> On **Windows**, use `python` (or the `py` launcher) in place of `python3` — e.g. `python scripts\agentcore_cli.py list`.
-
-It indexes **1800+ pages across 13 live official AWS sources** with zero static content that can go stale:
+All sources are fetched dynamically at startup. New pages published by AWS appear automatically without code changes.
 
 | ID | Source | Content |
 |----|--------|---------|
-| `docs` | Developer Guide | Concepts, tutorials, getting started, configuration |
-| `api_data_plane` | Data Plane API Reference | InvokeHarness, Memory CRUD, Browser, Code Interpreter, Identity tokens |
-| `api_control_plane` | Control Plane API Reference | Create/Update/Delete for runtimes, gateways, harnesses, policies |
-| `boto3_data_plane` | Boto3 Data Plane | Python client methods for runtime operations |
-| `boto3_control_plane` | Boto3 Control Plane | Python client methods for resource management |
-| `sdk` | AgentCore Python SDK | BedrockAgentCoreApp, MemoryClient, framework integrations |
-| `cloudformation` | CloudFormation Reference | Resource types and properties for IaC |
-| `cdk_typescript` | CDK TypeScript | L1 constructs with code examples |
-| `cdk_python` | CDK Python | `aws_cdk.aws_bedrockagentcore` module |
-| `cdk_java` | CDK Java | Java construct library |
-| `cdk_dotnet` | CDK .NET | .NET construct library |
-| `cdk_go` | CDK Go | Go construct library |
-| `faq` | AWS FAQs | Pricing, regions, supported frameworks/models |
+| `docs` | [Developer Guide](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/) | Concepts, tutorials, getting started, configuration |
+| `api_data_plane` | [Data Plane API Reference](https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/) | InvokeHarness, Memory CRUD, Browser, Code Interpreter, Identity tokens |
+| `api_control_plane` | [Control Plane API Reference](https://docs.aws.amazon.com/bedrock-agentcore-control/latest/APIReference/) | Create/Update/Delete for runtimes, gateways, harnesses, policies |
+| `boto3_data_plane` | [Boto3 Data Plane](https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore.html) | Python client methods for runtime operations |
+| `boto3_control_plane` | [Boto3 Control Plane](https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore-control.html) | Python client methods for resource management |
+| `sdk` | [AgentCore Python SDK](https://github.com/aws/bedrock-agentcore-sdk-python) | BedrockAgentCoreApp, MemoryClient, framework integrations |
+| `cloudformation` | [CloudFormation Reference](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/AWS_BedrockAgentCore/) | Resource types and properties for IaC |
+| `cdk_typescript` | [CDK TypeScript](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_bedrockagentcore-readme.html) | L1 constructs with code examples |
+| `cdk_python` | [CDK Python](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_bedrockagentcore.html) | aws_cdk.aws_bedrockagentcore module |
+| `cdk_java` | [CDK Java](https://docs.aws.amazon.com/cdk/api/v2/java/software/amazon/awscdk/cfnpropertymixins/services/bedrockagentcore/package-summary.html) | Java construct library |
+| `cdk_dotnet` | [CDK .NET](https://docs.aws.amazon.com/cdk/api/v2/dotnet/api/Amazon.CDK.AWS.BedrockAgentCore.html) | .NET construct library |
+| `cdk_go` | [CDK Go](https://pkg.go.dev/github.com/aws/aws-cdk-go/awscdk/v2@v2.260.0/awsbedrockagentcore) | Go construct library |
+| `faq` | [AWS FAQs](https://aws.amazon.com/bedrock/agentcore/faqs/) | Pricing, regions, supported frameworks/models |
 
-### The adaptive skill
+## How It Works
 
-`SKILL.md` decides *how* to answer. It detects intent and follows the matching workflow instead of dumping raw docs:
+Uses MCP stdio transport — each client (Claude Code, Kiro, Cursor) spawns its own server process and communicates via stdin/stdout. No ports, no network listeners, no conflicts when multiple apps run simultaneously on the same machine.
 
-| You say | The skill does |
-|---------|----------------|
-| "What is AgentCore?" / "where do I start" | Guided onboarding — component overview + personalized learning path |
-| "I have existing LangGraph/CrewAI code" | Migration assistant — before/after diff showing the minimal wrap |
-| "how much does it cost?" | Cost estimation from the FAQ source, with consumption-vs-always-on comparison |
-| "design / architect / what components" | Architecture recommendation with an ASCII diagram |
-| "build me X" | Full implementation — architecture, code, IaC, deploy commands, verification |
-| "are we production ready?" | Checklist with ✅/❌ across security, reliability, observability, quality |
-| "why not EKS / Lambda / Bedrock Agents?" | Structured comparison table with honest trade-offs |
+```
+┌──────────────────────────────┐
+│   AI Coding Assistant        │
+│   (Claude Code / Kiro / etc) │
+└──────────┬───────────────────┘
+           │ MCP (stdio — no ports)
+┌──────────▼───────────────────┐
+│   agentcore-assistant        │
+├──────────────────────────────┤
+│   Unified Index              │
+│   (13 sources, 1800+ pages)  │
+├──────────────────────────────┤
+│   Live Fetch + TTL Cache     │
+└──────────────────────────────┘
+```
 
-It grounds every answer in the CLI (no hallucinated APIs) and reads two curated reference files (`best-practices.md`, `anti-patterns.md`) when relevant.
+On startup: fetches lightweight manifests (titles + URLs) from all sources. On query: scores against the index, fetches top pages live, caches with configurable TTL. No static documentation content stored in code.
 
-## Install
+## Tools
 
-Prerequisite: **Python 3.8+** — check with `python3 --version` (macOS/Linux) or `python --version` (Windows). Nothing else.
+| Tool | Parameters | Purpose |
+|------|-----------|---------|
+| `list_agentcore_components` | `source?`, `component?` | Overview of all components — call first to discover terminology |
+| `search_agentcore_docs` | `query`, `source?`, `max_results?` | Search across all sources, returns live content snippets |
+| `fetch_agentcore_doc` | `url` | Fetch full page content by URL from search results |
 
-The skill is just the `skills/agentcore/` folder. Drop it into whatever directory your tool looks for skills in — you don't need the rest of the repo. Locations differ only by tool:
+## Using the MCP server standalone (other clients: Kiro, Cursor, …)
 
-| Tool | Skills directory |
-|------|------------------|
-| Claude Code (project) | `<project>/.claude/skills/` |
-| Claude Code (global) | `~/.claude/skills/` |
-| Cursor | `<project>/.cursor/skills/` |
-| Kiro | `<project>/.kiro/skills/` |
-| Any other skill-loading assistant | that tool's skills dir |
+The MCP server also works outside the Claude Code plugin system. Add it to any MCP-capable client's config:
 
-Directory names vary between assistants and versions — check your tool's docs, then put the `agentcore` folder there.
+### Option A: Direct (prebuilt — just clone)
 
-### Quickest: pull only the skill folder into a project
+```json
+{
+  "mcpServers": {
+    "agentcore": {
+      "command": "node",
+      "args": ["/path/to/aws-agentcore-plugin/dist/index.js"]
+    }
+  }
+}
+```
 
-This shallow **sparse** clone grabs *only* `skills/agentcore/` (not the whole repo). Set `SKILLS_DIR` for your tool, then run from your project root:
+### Option B: Docker (no Node.js required)
 
 ```bash
-# .claude/skills (Claude Code), .cursor/skills (Cursor), .kiro/skills (Kiro), ...
-SKILLS_DIR=.claude/skills
-
-git clone --depth 1 --filter=blob:none --sparse \
-  https://github.com/akshseh/aws-agentcore-plugin.git /tmp/agentcore-skill \
-  && git -C /tmp/agentcore-skill sparse-checkout set skills/agentcore \
-  && mkdir -p "$SKILLS_DIR" \
-  && cp -R /tmp/agentcore-skill/skills/agentcore "$SKILLS_DIR/agentcore" \
-  && rm -rf /tmp/agentcore-skill
+docker build -t agentcore-assistant .
 ```
 
-Result: `<project>/<SKILLS_DIR>/agentcore`.
+```json
+{
+  "mcpServers": {
+    "agentcore": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "agentcore-assistant"]
+    }
+  }
+}
+```
 
-### With the bundled installer (Claude Code)
-
-If you have the repo checked out, `install.sh` / `install.ps1` handle the Claude Code locations for you:
+### Option C: Global install (no absolute paths)
 
 ```bash
-# macOS / Linux
-./install.sh /path/to/your/project    # into one project → <project>/.claude/skills/agentcore
-./install.sh --global                 # for all projects → ~/.claude/skills/agentcore
+npm install && npm run build && npm install -g .
 ```
 
-```powershell
-# Windows (PowerShell)
-.\install.ps1 C:\path\to\your\project  # into one project
-.\install.ps1 -Global                  # for all projects
+```json
+{
+  "mcpServers": {
+    "agentcore": {
+      "command": "agentcore-assistant"
+    }
+  }
+}
 ```
 
-### Manually (any tool)
-
-Copy the `skills/agentcore` directory into your tool's skills directory:
-
-```bash
-# macOS / Linux — replace .claude/skills with your tool's skills dir
-cp -R skills/agentcore /path/to/project/.claude/skills/agentcore
-```
-
-```powershell
-# Windows (PowerShell)
-Copy-Item -Recurse skills\agentcore C:\path\to\project\.claude\skills\agentcore
-```
-
-See [INSTALLATION.md](INSTALLATION.md) for per-tool details and advanced configuration.
-
-## Verify
-
-Open your assistant in the project and ask:
-
-```
-What components does AgentCore have?
-```
-
-It should run `agentcore_cli.py list` and return a structured overview of all AgentCore services. You can also test the CLI directly:
-
-```bash
-# macOS / Linux
-python3 skills/agentcore/scripts/agentcore_cli.py sources
-
-# Windows (PowerShell)
-python skills\agentcore\scripts\agentcore_cli.py sources
-```
+See [SETUP_CLAUDE_CODE.md](SETUP_CLAUDE_CODE.md) for step-by-step Claude Code instructions, verification, and troubleshooting.
 
 ## Configuration
 
-Set these environment variables (e.g. in your shell or a wrapper) to tune the CLI:
-
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AGENTCORE_CACHE_TTL_MINUTES` | `60` | How long fetched pages stay cached (on disk, in the temp dir) |
+| `AGENTCORE_CACHE_TTL_MINUTES` | `60` | How long fetched pages stay cached |
 | `AGENTCORE_SOURCES` | `all` | Which sources to enable |
 
-Source selection:
+### Source selection
 
 ```bash
-AGENTCORE_SOURCES=all                              # all 13 sources (default)
-AGENTCORE_SOURCES=docs,api_data_plane,faq          # specific sources only
-AGENTCORE_SOURCES=-cdk_java,-cdk_dotnet,-cdk_go    # all except these
+# All 13 sources (default)
+AGENTCORE_SOURCES=all
+
+# Specific sources only
+AGENTCORE_SOURCES=docs,api_data_plane,api_control_plane,faq
+
+# All except specific ones (prefix with -)
+AGENTCORE_SOURCES=-cdk_java,-cdk_dotnet,-cdk_go
 ```
+
+## Verify Installation
+
+After adding the MCP config, verify the server is connected:
+
+1. **`/mcp` command** — shows connected servers and their status
+2. **Ask a question** — "What components does AgentCore have?" should trigger `list_agentcore_components`
+3. **Check tools** — ask "What agentcore tools do you have?"
+
+Multiple apps (Claude Code + Kiro) can run the server simultaneously with no conflicts — each spawns its own isolated process via stdio.
+
+## Try It
+
+One prompt per facet:
+
+- **Components** — "What services does AgentCore offer?"
+- **Developer guide** — "What's the difference between Harness and Runtime?"
+- **API reference** — "What parameters does CreateGateway accept?"
+- **Boto3** — "Show me the boto3 method for invoke_harness"
+- **Python SDK** — "How do I use BedrockAgentCoreApp to deploy my agent?"
+- **CDK / CloudFormation** — "How do I define an AgentCore Gateway in CDK?"
+- **FAQ** — "What's the pricing model for AgentCore, and which regions support it?"
+- **End-to-end** — "Build me a customer support agent with memory and authentication" (routes through the architect skill)
+
+For full story-driven walkthroughs (CTO discovery, build-and-ship, migration from EKS, multi-team platform), see [demo/](demo/).
 
 ## License
 
-Apache-2.0
+MIT
