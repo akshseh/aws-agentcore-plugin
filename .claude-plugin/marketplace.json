@@ -1,0 +1,14 @@
+{
+    "name": "aws-agentcore-marketplace",
+    "owner": {
+        "name": "Akarsha Sehwag"
+    },
+    "description": "Amazon Bedrock AgentCore assistant — live docs MCP server plus guided skills for designing, building, deploying, and hardening agent solutions.",
+    "plugins": [
+        {
+            "name": "aws-agentcore",
+            "source": "./",
+            "description": "Design, build, and ship production-ready AI agent solutions on Amazon Bedrock AgentCore."
+        }
+    ]
+}

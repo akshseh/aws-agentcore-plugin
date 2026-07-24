@@ -1,27 +1,31 @@
 {
-  "name": "agentcore-assistant",
-  "version": "4.0.0",
+  "name": "aws-agentcore",
+  "displayName": "AgentCore Assistant",
+  "version": "4.3.0",
+  "description": "Design, build, and ship production-ready AI agent solutions on Amazon Bedrock AgentCore. Bundles a live-documentation MCP server (zero static content, 13 official AWS sources) with guided skills for solution architecture, requirements elicitation, implementation, deployment, and production-readiness review.",
   "author": {
-    "name": "Amazon Web Services"
+    "name": "Akarsha Sehwag"
   },
-  "description": "A skill that helps you build, deploy, and operate AI agents on Amazon Bedrock AgentCore. Bundles a dependency-free CLI that indexes live documentation, API references, SDK patterns, boto3 methods, and CDK/CloudFormation templates from 13 official AWS sources, plus curated best-practice and anti-pattern references. Adapts to intent — exploration, migration, architecture advice, or full implementation.",
+  "license": "MIT",
   "keywords": [
     "aws",
     "bedrock",
     "agentcore",
-    "ai-agents",
+    "agents",
     "runtime",
     "harness",
     "memory",
+    "context",
+    "evaluation",
+    "orchestration",
     "gateway",
     "serverless",
+    "identity",
+    "mcp",
     "strands",
     "langgraph",
     "cdk",
-    "cloudformation",
-    "skill"
+    "cloudformation"
   ],
-  "license": "Apache-2.0",
-  "repository": "https://github.com/aws/agent-toolkit-for-aws",
-  "skills": "../skills/"
+  "mcpServers": "./.mcp.json"
 }
