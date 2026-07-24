@@ -1,8 +1,0 @@
-{
-  "vpcId": "vpc-0abc123def456",
-  "privateSubnetIds": ["subnet-0aaa111", "subnet-0bbb222"],
-  "cognitoUserPoolId": "us-west-2_AbCdEfG",
-  "cognitoClientId": "1234567890abcdef",
-  "ecrImageUri": "123456789012.dkr.ecr.us-west-2.amazonaws.com/support-agent:latest",
-  "environment": "dev"
-}
