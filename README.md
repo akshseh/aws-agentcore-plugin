@@ -182,8 +182,6 @@ One prompt per facet:
 - **FAQ** — "What's the pricing model for AgentCore, and which regions support it?"
 - **End-to-end** — "Build me a customer support agent with memory and authentication" (routes through the architect skill)
 
-For full story-driven walkthroughs (CTO discovery, build-and-ship, migration from EKS, multi-team platform), see [demo/](demo/).
-
 ## License
 
 MIT
