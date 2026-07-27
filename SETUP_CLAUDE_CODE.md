@@ -94,10 +94,10 @@ claude
 
 ### Check 1: MCP is connected
 
-Type `/mcp` — you should see:
+Type `/mcp` — you should see the server connected with 3 tools (named `agentcore-docs` with the plugin install, `agentcore` with the per-project install):
 
 ```
-agentcore: connected (3 tools)
+agentcore-docs: connected (3 tools)
   - list_agentcore_components
   - search_agentcore_docs
   - fetch_agentcore_doc

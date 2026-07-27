@@ -54,6 +54,13 @@ if (plugin && pkg && plugin.version !== pkg.version) {
   errors.push(`version mismatch: plugin.json ${plugin.version} vs package.json ${pkg.version}`);
 }
 
+const lock = readJson("package-lock.json");
+if (lock && pkg) {
+  if (lock.name !== pkg.name || lock.version !== pkg.version) {
+    errors.push(`package-lock.json out of sync: ${lock.name}@${lock.version} vs package.json ${pkg.name}@${pkg.version} — run npm install`);
+  }
+}
+
 // --- server version in source matches manifests ---
 if (pkg) {
   const src = readFileSync(join(root, "src/index.ts"), "utf-8");

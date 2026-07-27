@@ -7,12 +7,12 @@ A Claude Code plugin for designing, building, deploying, and hardening AI agent 
 
 ## Skills
 
-| Skill | Invoke | What it does |
-|---|---|---|
-| **architect** | `/aws-agentcore:architect` | Designs end-to-end solutions. Clarifies the four load-bearing decisions (PoC vs. production, security/VPC boundary, identity, existing infrastructure), applies best-practice defaults for the rest, and delivers a component map + diagram + assumptions + open decisions. |
-| **build** | `/aws-agentcore:build` | Implements the design — scaffolds projects with the AgentCore CLI, wraps existing framework code (Strands/LangGraph/CrewAI/ADK/OpenAI Agents) for Runtime, wires memory/gateway/identity/tools. Verifies every API shape against live docs before generating code. |
-| **deploy** | `/aws-agentcore:deploy` | Ships to AWS (CLI for dev, IaC for production) and troubleshoots deploy/invoke failures with a diagnosis table for the common failure classes. |
-| **production-readiness** | `/aws-agentcore:production-readiness` | Audits code, config, and deployed resources against a security/networking/reliability/observability/cost checklist and produces a ship / ship-with-risks / do-not-ship report. |
+| Skill                    | Invoke                                | What it does                                                                                                                                                                                                                                                                |
+| ------------------------ | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **architect**            | `/aws-agentcore:architect`            | Designs end-to-end solutions. Clarifies the four load-bearing decisions (PoC vs. production, security/VPC boundary, identity, existing infrastructure), applies best-practice defaults for the rest, and delivers a component map + diagram + assumptions + open decisions. |
+| **build**                | `/aws-agentcore:build`                | Implements the design — scaffolds projects with the AgentCore CLI, wraps existing framework code (Strands/LangGraph/CrewAI/ADK/OpenAI Agents) for Runtime, wires memory/gateway/identity/tools. Verifies every API shape against live docs before generating code.          |
+| **deploy**               | `/aws-agentcore:deploy`               | Ships to AWS (CLI for dev, IaC for production) and troubleshoots deploy/invoke failures with a diagnosis table for the common failure classes.                                                                                                                              |
+| **production-readiness** | `/aws-agentcore:production-readiness` | Audits code, config, and deployed resources against a security/networking/reliability/observability/cost checklist and produces a ship / ship-with-risks / do-not-ship report.                                                                                              |
 
 An `/aws-agentcore:agentcore` router command (`/agentcore` when installed via `install.sh`) routes free-form requests to the right skill. Skills also auto-trigger from natural language ("build me a support agent with memory on AWS").
 
@@ -41,21 +41,21 @@ AI coding assistants hallucinate when asked about AgentCore. They recommend EKS,
 
 All sources are fetched dynamically at startup. New pages published by AWS appear automatically without code changes.
 
-| ID | Source | Content |
-|----|--------|---------|
-| `docs` | [Developer Guide](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/) | Concepts, tutorials, getting started, configuration |
-| `api_data_plane` | [Data Plane API Reference](https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/) | InvokeHarness, Memory CRUD, Browser, Code Interpreter, Identity tokens |
-| `api_control_plane` | [Control Plane API Reference](https://docs.aws.amazon.com/bedrock-agentcore-control/latest/APIReference/) | Create/Update/Delete for runtimes, gateways, harnesses, policies |
-| `boto3_data_plane` | [Boto3 Data Plane](https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore.html) | Python client methods for runtime operations |
-| `boto3_control_plane` | [Boto3 Control Plane](https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore-control.html) | Python client methods for resource management |
-| `sdk` | [AgentCore Python SDK](https://github.com/aws/bedrock-agentcore-sdk-python) | BedrockAgentCoreApp, MemoryClient, framework integrations |
-| `cloudformation` | [CloudFormation Reference](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/AWS_BedrockAgentCore/) | Resource types and properties for IaC |
-| `cdk_typescript` | [CDK TypeScript](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_bedrockagentcore-readme.html) | L1 constructs with code examples |
-| `cdk_python` | [CDK Python](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_bedrockagentcore.html) | aws_cdk.aws_bedrockagentcore module |
-| `cdk_java` | [CDK Java](https://docs.aws.amazon.com/cdk/api/v2/java/software/amazon/awscdk/cfnpropertymixins/services/bedrockagentcore/package-summary.html) | Java construct library |
-| `cdk_dotnet` | [CDK .NET](https://docs.aws.amazon.com/cdk/api/v2/dotnet/api/Amazon.CDK.AWS.BedrockAgentCore.html) | .NET construct library |
-| `cdk_go` | [CDK Go](https://pkg.go.dev/github.com/aws/aws-cdk-go/awscdk/v2@v2.260.0/awsbedrockagentcore) | Go construct library |
-| `faq` | [AWS FAQs](https://aws.amazon.com/bedrock/agentcore/faqs/) | Pricing, regions, supported frameworks/models |
+| ID                    | Source                                                                                                                                          | Content                                                                |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `docs`                | [Developer Guide](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/)                                                               | Concepts, tutorials, getting started, configuration                    |
+| `api_data_plane`      | [Data Plane API Reference](https://docs.aws.amazon.com/bedrock-agentcore/latest/APIReference/)                                                  | InvokeHarness, Memory CRUD, Browser, Code Interpreter, Identity tokens |
+| `api_control_plane`   | [Control Plane API Reference](https://docs.aws.amazon.com/bedrock-agentcore-control/latest/APIReference/)                                       | Create/Update/Delete for runtimes, gateways, harnesses, policies       |
+| `boto3_data_plane`    | [Boto3 Data Plane](https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore.html)                                          | Python client methods for runtime operations                           |
+| `boto3_control_plane` | [Boto3 Control Plane](https://docs.aws.amazon.com/boto3/latest/reference/services/bedrock-agentcore-control.html)                               | Python client methods for resource management                          |
+| `sdk`                 | [AgentCore Python SDK](https://github.com/aws/bedrock-agentcore-sdk-python)                                                                     | BedrockAgentCoreApp, MemoryClient, framework integrations              |
+| `cloudformation`      | [CloudFormation Reference](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/AWS_BedrockAgentCore/)                        | Resource types and properties for IaC                                  |
+| `cdk_typescript`      | [CDK TypeScript](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_bedrockagentcore-readme.html)                                      | L1 constructs with code examples                                       |
+| `cdk_python`          | [CDK Python](https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_bedrockagentcore.html)                                                   | aws_cdk.aws_bedrockagentcore module                                    |
+| `cdk_java`            | [CDK Java](https://docs.aws.amazon.com/cdk/api/v2/java/software/amazon/awscdk/cfnpropertymixins/services/bedrockagentcore/package-summary.html) | Java construct library                                                 |
+| `cdk_dotnet`          | [CDK .NET](https://docs.aws.amazon.com/cdk/api/v2/dotnet/api/Amazon.CDK.AWS.BedrockAgentCore.html)                                              | .NET construct library                                                 |
+| `cdk_go`              | [CDK Go](https://pkg.go.dev/github.com/aws/aws-cdk-go/awscdk/v2@v2.260.0/awsbedrockagentcore)                                                   | Go construct library                                                   |
+| `faq`                 | [AWS FAQs](https://aws.amazon.com/bedrock/agentcore/faqs/)                                                                                      | Pricing, regions, supported frameworks/models                          |
 
 ## How It Works
 
@@ -81,11 +81,11 @@ On startup: fetches lightweight manifests (titles + URLs) from all sources. On q
 
 ## Tools
 
-| Tool | Parameters | Purpose |
-|------|-----------|---------|
-| `list_agentcore_components` | `source?`, `component?` | Overview of all components — call first to discover terminology |
-| `search_agentcore_docs` | `query`, `source?`, `max_results?` | Search across all sources, returns live content snippets |
-| `fetch_agentcore_doc` | `url` | Fetch full page content by URL from search results |
+| Tool                        | Parameters                         | Purpose                                                         |
+| --------------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| `list_agentcore_components` | `source?`, `component?`            | Overview of all components — call first to discover terminology |
+| `search_agentcore_docs`     | `query`, `source?`, `max_results?` | Search across all sources, returns live content snippets        |
+| `fetch_agentcore_doc`       | `url`                              | Fetch full page content by URL from search results              |
 
 ## Using the MCP server standalone (other clients: Kiro, Cursor, …)
 
@@ -141,10 +141,10 @@ See [SETUP_CLAUDE_CODE.md](SETUP_CLAUDE_CODE.md) for step-by-step Claude Code in
 
 ## Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AGENTCORE_CACHE_TTL_MINUTES` | `60` | How long fetched pages stay cached |
-| `AGENTCORE_SOURCES` | `all` | Which sources to enable |
+| Variable                      | Default | Description                        |
+| ----------------------------- | ------- | ---------------------------------- |
+| `AGENTCORE_CACHE_TTL_MINUTES` | `60`    | How long fetched pages stay cached |
+| `AGENTCORE_SOURCES`           | `all`   | Which sources to enable            |
 
 ### Source selection
 
