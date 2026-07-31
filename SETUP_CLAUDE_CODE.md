@@ -42,6 +42,7 @@ claude plugin install aws-agentcore@aws-agentcore-marketplace
 
 This registers everything at once, available in all projects:
 - the `agentcore-docs` MCP server (3 tools)
+- the `drawio` MCP server (`@drawio/mcp`) for architecture diagrams
 - skills: `/aws-agentcore:architect`, `/aws-agentcore:build`, `/aws-agentcore:deploy`, `/aws-agentcore:production-readiness`
 - the `/aws-agentcore:agentcore` router command
 
@@ -66,12 +67,21 @@ Create `.mcp.json` at your project root (note: MCP servers go in `.mcp.json`, **
     "agentcore": {
       "command": "node",
       "args": ["/path/to/aws-agentcore-plugin/dist/index.js"]
+    },
+    "drawio": {
+      "command": "npx",
+      "args": ["-y", "@drawio/mcp"]
     }
   }
 }
 ```
 
-Or equivalently: `claude mcp add agentcore --scope project -- node /path/to/aws-agentcore-plugin/dist/index.js`
+Or equivalently:
+
+```bash
+claude mcp add agentcore --scope project -- node /path/to/aws-agentcore-plugin/dist/index.js
+claude mcp add drawio --scope project -- npx -y @drawio/mcp
+```
 
 Copy the command and skills:
 
@@ -94,14 +104,19 @@ claude
 
 ### Check 1: MCP is connected
 
-Type `/mcp` — you should see the server connected with 3 tools (named `agentcore-docs` with the plugin install, `agentcore` with the per-project install):
+Type `/mcp` — you should see two servers connected. The docs server is named `agentcore-docs` with the plugin install (`agentcore` with the per-project install):
 
 ```
 agentcore-docs: connected (3 tools)
   - list_agentcore_components
   - search_agentcore_docs
   - fetch_agentcore_doc
+drawio: connected
+  - open_drawio_mermaid, open_drawio_xml, open_drawio_csv,
+    search_shapes, list_pages, get_page, set_page
 ```
+
+The `drawio` server is fetched from npm on first use (`npx -y @drawio/mcp`), so its first connection may take a few seconds.
 
 ### Check 2: Skill is available
 
@@ -141,13 +156,23 @@ How do I deploy a LangGraph agent serverlessly on AWS?
 
 ## What you get
 
-### 3 MCP tools (always available)
+### MCP tools (always available)
+
+Docs server (`agentcore-docs`):
 
 | Tool | What it does |
 |------|-------------|
 | `list_agentcore_components` | Shows all AgentCore services and sub-topics |
 | `search_agentcore_docs` | Searches 1800+ pages across 13 official sources |
 | `fetch_agentcore_doc` | Fetches full page content by URL |
+
+Diagram server (`drawio`):
+
+| Tool | What it does |
+|------|-------------|
+| `open_drawio_mermaid` / `open_drawio_xml` / `open_drawio_csv` | Open a diagram from Mermaid, mxGraph XML, or CSV |
+| `search_shapes` | Find AWS/other icons in the shape library |
+| `list_pages` / `get_page` / `set_page` | Inspect and update pages in a `.drawio` file |
 
 ### 4 skills + a router command
 

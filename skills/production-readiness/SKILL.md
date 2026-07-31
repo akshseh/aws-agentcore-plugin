@@ -8,6 +8,20 @@ allowed-tools:
   - mcp__agentcore__list_agentcore_components
   - mcp__agentcore__search_agentcore_docs
   - mcp__agentcore__fetch_agentcore_doc
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_xml
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_mermaid
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_csv
+  - mcp__plugin_aws-agentcore_drawio__search_shapes
+  - mcp__plugin_aws-agentcore_drawio__list_pages
+  - mcp__plugin_aws-agentcore_drawio__get_page
+  - mcp__plugin_aws-agentcore_drawio__set_page
+  - mcp__drawio__open_drawio_xml
+  - mcp__drawio__open_drawio_mermaid
+  - mcp__drawio__open_drawio_csv
+  - mcp__drawio__search_shapes
+  - mcp__drawio__list_pages
+  - mcp__drawio__get_page
+  - mcp__drawio__set_page
   - Read
   - Grep
   - Glob

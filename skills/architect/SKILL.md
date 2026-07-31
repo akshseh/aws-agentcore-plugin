@@ -8,6 +8,20 @@ allowed-tools:
   - mcp__agentcore__list_agentcore_components
   - mcp__agentcore__search_agentcore_docs
   - mcp__agentcore__fetch_agentcore_doc
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_xml
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_mermaid
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_csv
+  - mcp__plugin_aws-agentcore_drawio__search_shapes
+  - mcp__plugin_aws-agentcore_drawio__list_pages
+  - mcp__plugin_aws-agentcore_drawio__get_page
+  - mcp__plugin_aws-agentcore_drawio__set_page
+  - mcp__drawio__open_drawio_xml
+  - mcp__drawio__open_drawio_mermaid
+  - mcp__drawio__open_drawio_csv
+  - mcp__drawio__search_shapes
+  - mcp__drawio__list_pages
+  - mcp__drawio__get_page
+  - mcp__drawio__set_page
   - Read
   - Grep
   - Glob
@@ -68,7 +82,11 @@ Deliver in this order:
 
 1. **One-paragraph summary** of what will be built.
 2. **Component table**: component → why it's needed → key configuration choice.
-3. **Architecture diagram** (Mermaid) showing request flow: caller → auth → runtime/harness → gateway/tools → downstream, with the network boundary drawn.
+3. **Architecture diagram** showing request flow: caller → auth → runtime/harness → gateway/tools → downstream, with the network boundary drawn. Always include a Mermaid block inline. Then offer a draw.io diagram via the `drawio` MCP tools — the user can accept, or you can skip if they only want the summary:
+   - Render the flow with `open_drawio_mermaid` (pass the same Mermaid), or build richer mxGraph XML with `open_drawio_xml` when you want branded AWS icons.
+   - For AWS/AgentCore service icons, call `search_shapes` (e.g. "Bedrock", "Lambda", "VPC", "API Gateway") to find the correct stencil styles before assembling the XML — don't guess style strings.
+   - Draw the VPC/network boundary as a container so the security perimeter is visible.
+   - If the draw.io server isn't available (e.g. `npx @drawio/mcp` can't run offline, or the tools aren't loaded), fall back to the Mermaid block and say so — never block the deliverable on the diagram.
 4. **Assumptions made** — every default you chose without asking, each with a one-line rationale.
 5. **Decisions still open** — anything that blocks implementation.
 6. **Next steps** — point to the companion skills: `/aws-agentcore:build` (scaffold code + config), `/aws-agentcore:deploy` (CLI or IaC deployment), `/aws-agentcore:production-readiness` (pre-launch review). For production designs, always include the production-readiness review as a required step.

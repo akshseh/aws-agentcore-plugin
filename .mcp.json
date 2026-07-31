@@ -9,6 +9,13 @@
                 "AGENTCORE_SOURCES": "all",
                 "AGENTCORE_CACHE_TTL_MINUTES": "60"
             }
+        },
+        "drawio": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@drawio/mcp"
+            ]
         }
     }
 }
