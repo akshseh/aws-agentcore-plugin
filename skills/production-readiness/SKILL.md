@@ -91,6 +91,10 @@ Audit what actually exists — code, config, and deployed resources — against 
 - [ ] Cost model estimated from **live pricing** (FAQ source), formula shown, date-stamped
 - [ ] Token/iteration limits function as the cost circuit-breaker; billing alarms set
 
+## Diagram the findings (optional)
+
+After the report, offer a risk-annotated architecture diagram via the `drawio` MCP tools — the same request-flow/topology as architect's diagram, with ❌ blockers and ⚠️ risks called out on the components they affect (e.g., a wildcard execution role, a missing VPC boundary, an unpinned endpoint). Render with `open_drawio_mermaid`, or `open_drawio_xml` with `search_shapes` for branded AWS icons (don't guess style strings). This is a communication aid for the ship/no-ship conversation, not a substitute for the written findings — skip silently if the user only wants the report, and if the draw.io server isn't available, say so and move on.
+
 ## Handoffs
 
 Fixes to code/config → `/aws-agentcore:build`. Redeploy and verification → `/aws-agentcore:deploy`. If findings reveal the architecture is wrong (e.g., auth mode is a one-way door that was missed) → `/aws-agentcore:architect`.

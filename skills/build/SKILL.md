@@ -70,6 +70,10 @@ Use `agentcore add <memory|gateway|agent|credential|evaluator|...>` where the CL
 - **Tools running generated code**: always Code Interpreter, never in-process exec.
 - **Human approval steps**: model as explicit interrupt/tool patterns plus a Cedar policy condition — never prompt-text-only.
 
+### Diagram the wiring (optional)
+
+After scaffolding or wiring components, offer to draw the as-built wiring with the `drawio` MCP tools — agent/runtime → memory, gateway targets → tools, identity/credential flow, and any VPC boundary. Render with `open_drawio_mermaid`, or `open_drawio_xml` when you want branded AWS icons (call `search_shapes` first — e.g. "Bedrock", "Lambda", "VPC" — rather than guessing style strings). If the architect already produced a diagram, reflect the concrete resource names you created rather than starting over. Skip silently if the user only wants code; if the draw.io server isn't available, say so and move on — never block the build on the diagram.
+
 ### Code quality bar
 
 Production-quality by default: typed handlers, structured logging, timeouts and error handling on every tool call, no secrets in code, configuration externalized. For PoC posture, you may simplify — but leave `# TODO(production):` markers and tell the user to run `/aws-agentcore:production-readiness` before shipping.

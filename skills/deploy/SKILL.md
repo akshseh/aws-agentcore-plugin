@@ -53,6 +53,10 @@ Get the agent from working-locally to running-in-AWS, and fix it when it breaks.
 4. **Verify**: `agentcore status`, then a real invocation (`agentcore invoke --prompt "..."`), then check traces/logs (`agentcore logs`, CloudWatch). A deploy isn't done until an invoke succeeds.
 5. **Environments**: use named endpoints pinned to versions (`prod`, `staging`); never point production clients at latest. Multi-env: separate targets/accounts, promote by repointing endpoints.
 
+### Diagram the deployment topology (optional)
+
+When it clarifies a multi-environment or multi-account setup, offer a deployment-topology diagram via the `drawio` MCP tools — accounts/regions, endpoints pinned to versions (`prod`/`staging`), the VPC/network boundary, and the CI/CD promotion flow. Render with `open_drawio_mermaid`, or `open_drawio_xml` with `search_shapes` for branded AWS icons (don't guess style strings). Skip silently for a simple single-account deploy or if the user didn't ask; if the draw.io server isn't available, say so and continue — never block the deploy on the diagram.
+
 ## Troubleshooting
 
 Always start from the real error text. Common failure classes to check against (verify current fixes in live docs — `runtime-troubleshooting` and the code-deploy `common-issues` pages):
