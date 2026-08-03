@@ -8,6 +8,20 @@ allowed-tools:
   - mcp__agentcore__list_agentcore_components
   - mcp__agentcore__search_agentcore_docs
   - mcp__agentcore__fetch_agentcore_doc
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_xml
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_mermaid
+  - mcp__plugin_aws-agentcore_drawio__open_drawio_csv
+  - mcp__plugin_aws-agentcore_drawio__search_shapes
+  - mcp__plugin_aws-agentcore_drawio__list_pages
+  - mcp__plugin_aws-agentcore_drawio__get_page
+  - mcp__plugin_aws-agentcore_drawio__set_page
+  - mcp__drawio__open_drawio_xml
+  - mcp__drawio__open_drawio_mermaid
+  - mcp__drawio__open_drawio_csv
+  - mcp__drawio__search_shapes
+  - mcp__drawio__list_pages
+  - mcp__drawio__get_page
+  - mcp__drawio__set_page
   - Read
   - Grep
   - Glob
@@ -76,6 +90,10 @@ Audit what actually exists — code, config, and deployed resources — against 
 ### Cost
 - [ ] Cost model estimated from **live pricing** (FAQ source), formula shown, date-stamped
 - [ ] Token/iteration limits function as the cost circuit-breaker; billing alarms set
+
+## Diagram the findings (optional)
+
+After the report, offer a risk-annotated architecture diagram via the `drawio` MCP tools — the same request-flow/topology as architect's diagram, with ❌ blockers and ⚠️ risks called out on the components they affect (e.g., a wildcard execution role, a missing VPC boundary, an unpinned endpoint). Render with `open_drawio_mermaid`, or `open_drawio_xml` with `search_shapes` for branded AWS icons (don't guess style strings). This is a communication aid for the ship/no-ship conversation, not a substitute for the written findings — skip silently if the user only wants the report, and if the draw.io server isn't available, say so and move on.
 
 ## Handoffs
 

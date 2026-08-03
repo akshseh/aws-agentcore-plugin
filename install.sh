@@ -47,10 +47,14 @@ if [ -f "$MCP_FILE" ]; then
         command: 'node',
         args: [process.argv[2] + '/dist/index.js']
       };
+      config.mcpServers.drawio = config.mcpServers.drawio || {
+        command: 'npx',
+        args: ['-y', '@drawio/mcp']
+      };
       fs.writeFileSync(process.argv[3], JSON.stringify(config, null, 2) + '\n');
     " "$MCP_FILE" "$SCRIPT_DIR" "$TMP_FILE"
     mv "$TMP_FILE" "$MCP_FILE"
-    echo "✓ MCP server added to existing $MCP_FILE"
+    echo "✓ MCP servers (agentcore, drawio) added to existing $MCP_FILE"
   fi
 else
   cat > "$MCP_FILE" << EOF
@@ -59,11 +63,15 @@ else
     "agentcore": {
       "command": "node",
       "args": ["$SCRIPT_DIR/dist/index.js"]
+    },
+    "drawio": {
+      "command": "npx",
+      "args": ["-y", "@drawio/mcp"]
     }
   }
 }
 EOF
-  echo "✓ Created $MCP_FILE with MCP server config"
+  echo "✓ Created $MCP_FILE with MCP server config (agentcore, drawio)"
 fi
 
 # Copy command file
@@ -94,6 +102,6 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Done! Open Claude Code in $TARGET_DIR"
 echo "  (approve the project MCP server when prompted)"
 echo ""
-echo "  Verify:  /mcp        → should show agentcore server"
+echo "  Verify:  /mcp        → should show agentcore + drawio servers"
 echo "  Try:     /agentcore  → should invoke the command"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
