@@ -1,8 +1,8 @@
 {
   "name": "aws-agentcore",
   "displayName": "AgentCore Assistant",
-  "version": "4.4.0",
-  "description": "Design, build, and ship production-ready AI agent solutions on Amazon Bedrock AgentCore. Bundles a live-documentation MCP server (zero static content, 13 official AWS sources) and the official draw.io MCP server for architecture diagrams, with guided skills for solution architecture, requirements elicitation, implementation, deployment, and production-readiness review.",
+  "version": "4.3.0",
+  "description": "Design, build, and ship production-ready AI agent solutions on Amazon Bedrock AgentCore. Bundles a live-documentation MCP server (zero static content, 13 official AWS sources) with guided skills for solution architecture, requirements elicitation, implementation, deployment, and production-readiness review.",
   "author": {
     "name": "Akarsha Sehwag"
   },
@@ -22,9 +22,6 @@
     "serverless",
     "identity",
     "mcp",
-    "drawio",
-    "diagram",
-    "architecture",
     "strands",
     "langgraph",
     "cdk",

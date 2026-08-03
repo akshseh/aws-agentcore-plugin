@@ -8,20 +8,6 @@ allowed-tools:
   - mcp__agentcore__list_agentcore_components
   - mcp__agentcore__search_agentcore_docs
   - mcp__agentcore__fetch_agentcore_doc
-  - mcp__plugin_aws-agentcore_drawio__open_drawio_xml
-  - mcp__plugin_aws-agentcore_drawio__open_drawio_mermaid
-  - mcp__plugin_aws-agentcore_drawio__open_drawio_csv
-  - mcp__plugin_aws-agentcore_drawio__search_shapes
-  - mcp__plugin_aws-agentcore_drawio__list_pages
-  - mcp__plugin_aws-agentcore_drawio__get_page
-  - mcp__plugin_aws-agentcore_drawio__set_page
-  - mcp__drawio__open_drawio_xml
-  - mcp__drawio__open_drawio_mermaid
-  - mcp__drawio__open_drawio_csv
-  - mcp__drawio__search_shapes
-  - mcp__drawio__list_pages
-  - mcp__drawio__get_page
-  - mcp__drawio__set_page
   - Read
   - Grep
   - Glob
@@ -52,10 +38,6 @@ Get the agent from working-locally to running-in-AWS, and fix it when it breaks.
 3. **Deploy**: `agentcore deploy`. First deploy may CDK-bootstrap the account and take minutes; memory resources can sit in CREATING for a few minutes — that's normal, don't re-run.
 4. **Verify**: `agentcore status`, then a real invocation (`agentcore invoke --prompt "..."`), then check traces/logs (`agentcore logs`, CloudWatch). A deploy isn't done until an invoke succeeds.
 5. **Environments**: use named endpoints pinned to versions (`prod`, `staging`); never point production clients at latest. Multi-env: separate targets/accounts, promote by repointing endpoints.
-
-### Diagram the deployment topology (optional)
-
-When it clarifies a multi-environment or multi-account setup, offer a deployment-topology diagram via the `drawio` MCP tools — accounts/regions, endpoints pinned to versions (`prod`/`staging`), the VPC/network boundary, and the CI/CD promotion flow. Render with `open_drawio_mermaid`, or `open_drawio_xml` with `search_shapes` for branded AWS icons (don't guess style strings). Skip silently for a simple single-account deploy or if the user didn't ask; if the draw.io server isn't available, say so and continue — never block the deploy on the diagram.
 
 ## Troubleshooting
 

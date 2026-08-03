@@ -3,7 +3,6 @@
 A Claude Code plugin for designing, building, deploying, and hardening AI agent solutions on Amazon Bedrock AgentCore. It combines:
 
 - **A live-documentation MCP server** — indexes 1800+ pages from 13 official AWS sources with zero static content, so answers about APIs, regions, pricing, and quotas are always fresh.
-- **The official draw.io MCP server** (`@drawio/mcp`) — turns the architecture into a draw.io diagram with real AWS icons, opened in the browser and ready to refine or export.
 - **Four guided skills** that encode the solution-architecture workflow — requirements elicitation, best practices, and anti-patterns — for both production developers and solutions architects building PoCs.
 
 ## Skills
@@ -30,7 +29,7 @@ The repo ships with a prebuilt server (`dist/index.js`) — no build step needed
 
 Or from a local clone: `/plugin marketplace add /path/to/aws-agentcore-plugin`.
 
-This registers both MCP servers (the AgentCore docs server and the draw.io diagram server) and all skills automatically, available in every project. The draw.io server runs on demand via `npx -y @drawio/mcp` (fetched from npm on first use; needs Node.js 18+ and network access). To rebuild the docs server from source: `npm install && npm run build`.
+This registers the MCP server and all skills automatically, available in every project. To rebuild the server from source: `npm install && npm run build`.
 
 Alternatively use `./install.sh` to install into a single project (writes the MCP config to the project's `.mcp.json` and copies the command + skills into `.claude/` — see [SETUP_CLAUDE_CODE.md](SETUP_CLAUDE_CODE.md)).
 
@@ -82,23 +81,11 @@ On startup: fetches lightweight manifests (titles + URLs) from all sources. On q
 
 ## Tools
 
-**AgentCore docs server (`agentcore-docs`):**
-
 | Tool                        | Parameters                         | Purpose                                                         |
 | --------------------------- | ---------------------------------- | --------------------------------------------------------------- |
 | `list_agentcore_components` | `source?`, `component?`            | Overview of all components — call first to discover terminology |
 | `search_agentcore_docs`     | `query`, `source?`, `max_results?` | Search across all sources, returns live content snippets        |
 | `fetch_agentcore_doc`       | `url`                              | Fetch full page content by URL from search results              |
-
-**Diagram server (`drawio`, from `@drawio/mcp`):** used by the skills to render architecture diagrams.
-
-| Tool                  | Purpose                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| `open_drawio_mermaid` | Open a diagram from Mermaid syntax                           |
-| `open_drawio_xml`     | Open a diagram from draw.io/mxGraph XML (branded AWS icons)  |
-| `open_drawio_csv`     | Build a diagram from CSV data                                |
-| `search_shapes`       | Search the shape library (~10k shapes) for AWS/other icons   |
-| `list_pages` / `get_page` / `set_page` | Inspect and update pages in a `.drawio` file |
 
 ## Using the MCP server standalone (other clients: Kiro, Cursor, …)
 
