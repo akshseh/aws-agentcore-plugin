@@ -154,10 +154,18 @@ See [SETUP_CLAUDE_CODE.md](SETUP_CLAUDE_CODE.md) for step-by-step Claude Code in
 
 ## Configuration
 
+**Docs server (`agentcore-docs`):**
+
 | Variable                      | Default | Description                        |
 | ----------------------------- | ------- | ---------------------------------- |
 | `AGENTCORE_CACHE_TTL_MINUTES` | `60`    | How long fetched pages stay cached |
 | `AGENTCORE_SOURCES`           | `all`   | Which sources to enable            |
+
+**Diagram server (`drawio`):**
+
+| Variable          | Default                     | Description                                                                                     |
+| ----------------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `DRAWIO_BASE_URL` | `https://app.diagrams.net/` | draw.io editor used to open diagrams. Point at a self-hosted instance to keep content off the public editor (see [PRIVACY.md](PRIVACY.md)). |
 
 ### Source selection
 

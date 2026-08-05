@@ -227,6 +227,12 @@ Set environment variables in your `.mcp.json` (per-project install) or in the pl
 | `AGENTCORE_CACHE_TTL_MINUTES` | `60` | Any number (minutes) |
 | `AGENTCORE_SOURCES` | `all` | Comma-separated: `docs`, `api_data_plane`, `api_control_plane`, `boto3_data_plane`, `boto3_control_plane`, `sdk`, `cloudformation`, `cdk_typescript`, `cdk_python`, `cdk_java`, `cdk_dotnet`, `cdk_go`, `faq` |
 
+The `drawio` server reads one variable (set it in that server's `env` block):
+
+| Variable | Default | Options |
+|----------|---------|---------|
+| `DRAWIO_BASE_URL` | `https://app.diagrams.net/` | URL of the draw.io editor. Point at a self-hosted instance to keep diagram content off the public editor. |
+
 ---
 
 ## Troubleshooting
@@ -236,6 +242,7 @@ Set environment variables in your `.mcp.json` (per-project install) or in the pl
 | `/mcp` shows agentcore as disconnected | Check the path in `.mcp.json`. Run `node /path/to/dist/index.js` manually to see errors. |
 | MCP server missing entirely | MCP servers must be in `.mcp.json` at the project root, not `.claude/settings.json`. Also check you approved the project server when Claude Code prompted (`claude mcp list` to inspect). |
 | `/agentcore` doesn't appear as a command | Plugin install: it's namespaced — type `/aws-agentcore:agentcore`. Per-project install: ensure `.claude/commands/agentcore.md` exists. |
+| `/mcp` shows drawio as disconnected | It runs via `npx -y @drawio/mcp`, so the first start downloads the package — needs `npx` on `PATH`, Node.js 18+, and network access. Run `npx -y @drawio/mcp --version` manually to see errors. |
 | "Failed to load index" error | Check internet connectivity. The server needs to reach docs.aws.amazon.com. |
 | Slow first response | Normal — the index loads on first use (~3-5 seconds). Subsequent queries are fast. |
 | Stale documentation | Restart Claude Code (the server restarts and reloads fresh). Or set a lower cache TTL. |
